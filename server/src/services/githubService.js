@@ -3,6 +3,43 @@ const config = require('../config/settings')
 const path = require('path')
 const fs = require('fs')
 
+/**
+ * GitHub API Endpoints Used (curl examples):
+ * 
+ * 1. Check branch exists:
+ *    curl -H "Authorization: token {token}" \
+ *         -H "Accept: application/vnd.github.v3+json" \
+ *         https://api.github.com/repos/{owner}/{repo}/git/refs/heads/{branch}
+ * 
+ * 2. Create branch:
+ *    curl -X POST -H "Authorization: token {token}" \
+ *         -H "Accept: application/vnd.github.v3+json" \
+ *         -d '{"ref":"refs/heads/{branchName}","sha":"{baseCommitSHA}"}' \
+ *         https://api.github.com/repos/{owner}/{repo}/git/refs
+ * 
+ * 3. Upload file:
+ *    curl -X PUT -H "Authorization: token {token}" \
+ *         -H "Accept: application/vnd.github.v3+json" \
+ *         -d '{"message":"{commitMessage}","content":"{base64Content}","branch":"{targetBranch}"}' \
+ *         https://api.github.com/repos/{owner}/{repo}/contents/{path}
+ * 
+ * 4. List PRs:
+ *    curl -H "Authorization: token {token}" \
+ *         -H "Accept: application/vnd.github.v3+json" \
+ *         "https://api.github.com/repos/{owner}/{repo}/pulls?state={state}&head={headBranch}"
+ * 
+ * 5. Create PR:
+ *    curl -X POST -H "Authorization: token {token}" \
+ *         -H "Accept: application/vnd.github.v3+json" \
+ *         -d '{"title":"{title}","head":"{headBranch}","base":"{baseBranch}","body":"{description}"}' \
+ *         https://api.github.com/repos/{owner}/{repo}/pulls
+ * 
+ * 6. Create issue:
+ *    curl -X POST -H "Authorization: token {token}" \
+ *         -H "Accept: application/vnd.github.v3+json" \
+ *         -d '{"title":"{title}","body":"{description}","labels":["label1","label2"]}' \
+ *         https://api.github.com/repos/{owner}/{repo}/issues
+ */
 class GithubService {
   constructor() {
     this.baseURL = `https://api.github.com/repos/${config.github.repoOwner}/${config.github.repoName}`
@@ -36,25 +73,30 @@ class GithubService {
 
   async uploadImageAndCreatePR(imagePath) {
     try {
-      const branchName = `feedback-image-${Date.now()}`
       const fileName = path.basename(imagePath)
       const imageData = fs.readFileSync(imagePath)
       const base64Image = imageData.toString('base64')
+      const branchName = 'feedback-images'
 
       console.log(`Starting image upload process for: ${fileName}`)
-      console.log(`Creating new branch: ${branchName}`)
 
-      // 1. 创建新分支
-      const mainBranch = await axios.get(`${this.baseURL}/git/refs/heads/main`, { headers: this.headers })
-      console.log(`Got main branch SHA: ${mainBranch.data.object.sha}`)
-      
-      const branchRes = await axios.post(`${this.baseURL}/git/refs`, {
-        ref: `refs/heads/${branchName}`,
-        sha: mainBranch.data.object.sha
-      }, { headers: this.headers })
-      console.log(`Created branch ${branchName} successfully`)
+      // 1. 检查分支是否存在，不存在则创建
+      try {
+        await axios.get(`${this.baseURL}/git/refs/heads/${branchName}`, { headers: this.headers })
+      } catch (error) {
+        if (error.response?.status === 404) {
+          const mainBranch = await axios.get(`${this.baseURL}/git/refs/heads/main`, { headers: this.headers })
+          await axios.post(`${this.baseURL}/git/refs`, {
+            ref: `refs/heads/${branchName}`,
+            sha: mainBranch.data.object.sha
+          }, { headers: this.headers })
+          console.log(`Created branch ${branchName} successfully`)
+        } else {
+          throw error
+        }
+      }
 
-      // 2. 上传图片到新分支
+      // 2. 上传图片到固定分支
       console.log(`Uploading image to branch: ${branchName}`)
       const uploadRes = await axios.put(`${this.baseURL}/contents/${this.imagesDir}/${fileName}`, {
         message: `Add feedback image ${fileName}`,
@@ -63,21 +105,28 @@ class GithubService {
       }, { headers: this.headers })
       console.log(`Image uploaded successfully: ${uploadRes.data.content.html_url}`)
 
-      // 3. 创建PR
-      console.log(`Creating PR for branch: ${branchName}`)
-      const pr = await axios.post(`${this.baseURL}/pulls`, {
-        title: `Add feedback image ${fileName}`,
-        head: branchName,
-        base: 'main',
-        body: 'Automatically created for feedback system'
-      }, { headers: this.headers })
-      console.log(`PR created successfully: ${pr.data.html_url}`)
+      // 3. 检查PR是否存在，不存在则创建
+      let prUrl = ''
+      const prs = await axios.get(`${this.baseURL}/pulls?state=open&head=${config.github.repoOwner}:${branchName}`, { headers: this.headers })
+      if (prs.data.length === 0) {
+        const pr = await axios.post(`${this.baseURL}/pulls`, {
+          title: 'Feedback Images',
+          head: branchName,
+          base: 'main',
+          body: 'Automatically created for feedback system'
+        }, { headers: this.headers })
+        prUrl = pr.data.html_url
+        console.log(`PR created successfully: ${prUrl}`)
+      } else {
+        prUrl = prs.data[0].html_url
+        console.log(`Using existing PR: ${prUrl}`)
+      }
 
       const imageUrl = `https://raw.githubusercontent.com/${config.github.repoOwner}/${config.github.repoName}/${branchName}/${this.imagesDir}/${fileName}`
       console.log(`Generated image URL: ${imageUrl}`)
 
       return {
-        prUrl: pr.data.html_url,
+        prUrl: prUrl,
         imageUrl: imageUrl
       }
     } catch (error) {
