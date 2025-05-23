@@ -190,19 +190,23 @@ export default {
         formData.append('image', file);
         formData.append('title', `${this.feedbackType}反馈`);
         formData.append('content', this.feedbackContent);
-        formData.append('page', this.currentPage);
+        formData.append('page', window.location.href);
         formData.append('selectedText', this.selectedText);
 
         const response = await fetch('http://localhost:3000/api/feedback', {
           method: 'POST',
-          body: formData
+          body: formData,
+          headers: {
+            'Accept': 'application/json'
+          }
         });
 
-        if (!response.ok) {
-          throw new Error('提交失败');
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          throw new Error(result.message || '提交失败');
         }
 
-        alert('反馈提交成功！');
+        alert(result.message || '反馈提交成功！');
         this.feedbackType = 'bug';
         this.feedbackContent = '';
         this.selectedText = '';
@@ -210,7 +214,7 @@ export default {
         this.showFeedbackForm = false;
       } catch (error) {
         console.error('提交反馈失败:', error);
-        alert('提交反馈失败，请稍后再试');
+        alert(error.message || '提交反馈失败，请稍后再试');
       }
     },
     closeFeedbackForm() {

@@ -50,59 +50,77 @@ const upload = multer({
 
 // 提交反馈
 router.post('/', upload.single('image'), async (req, res) => {
+  console.log('Received feedback submission:', {
+    body: req.body,
+    file: req.file ? {
+      originalname: req.file.originalname,
+      size: req.file.size,
+      mimetype: req.file.mimetype
+    } : null
+  })
   try {
     const { title, content } = req.body
     if (!req.file) {
-      return res.status(400).json({ error: 'No image uploaded' })
+      return res.status(400).json({ 
+        success: false,
+        message: 'Validation failed',
+        error: 'No image uploaded'
+      })
     }
 
-    // 构造反馈数据
-    const feedback = {
-      id: Date.now(),
-      timestamp: new Date().toISOString(),
-      type: req.body.type || 'general',
-      title: title,
-      content: content,
-      page: req.body.page || '',
-      selectedText: req.body.selectedText || '',
-      imageUrl: `/uploads/${req.file.filename}`,
-      status: 'new'
-    }
+      // 构造反馈数据
+      const feedback = {
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        type: req.body.type || 'general',
+        title: title,
+        content: content,
+        page: req.body.page || '',
+        selectedText: req.body.selectedText || '',
+        imageUrl: path.join(uploadsDir, req.file.filename),
+        status: 'new'
+      }
 
     // 保存到JSON文件
     const feedbackPath = path.join(dataDir, `feedback-${feedback.id}.json`)
     fs.writeFileSync(feedbackPath, JSON.stringify(feedback, null, 2))
 
-    // 提交到GitHub
+    // 异步提交到GitHub
     if (config.github.repoOwner && config.github.repoName && config.github.authToken) {
-      try {
-        console.log('Attempting to create GitHub issue for feedback:', feedback.id)
-        const issue = await githubService.createIssue(feedback)
-        feedback.status = 'synced'
-        feedback.githubIssueUrl = issue.html_url
-        feedback.githubIssueNumber = issue.number
-        fs.writeFileSync(feedbackPath, JSON.stringify(feedback, null, 2))
-        console.log('Successfully synced feedback to GitHub:', {
-          feedbackId: feedback.id, 
-          issueUrl: issue.html_url
+      githubService.createIssue(feedback)
+        .then(issue => {
+          feedback.status = 'synced'
+          feedback.githubIssueUrl = issue.html_url
+          feedback.githubIssueNumber = issue.number
+          fs.writeFileSync(feedbackPath, JSON.stringify(feedback, null, 2))
+          console.log('Successfully synced feedback to GitHub:', {
+            feedbackId: feedback.id, 
+            issueUrl: issue.html_url
+          })
         })
-      } catch (err) {
-        console.error('Failed to sync feedback to GitHub:', {
-          feedbackId: feedback.id,
-          error: err.message
+        .catch(err => {
+          console.error('Failed to sync feedback to GitHub:', {
+            feedbackId: feedback.id,
+            error: err.message
+          })
+          feedback.status = 'sync_failed'
+          fs.writeFileSync(feedbackPath, JSON.stringify(feedback, null, 2))
         })
-        feedback.status = 'sync_failed'
-        fs.writeFileSync(feedbackPath, JSON.stringify(feedback, null, 2))
-      }
     }
 
-    res.json({
+    // 立即返回成功响应
+    return res.status(200).json({
       success: true,
+      message: 'Feedback submitted successfully',
       data: feedback
     })
   } catch (err) {
     console.error(err)
-    res.status(500).json({ error: 'Server error' })
+    return res.status(500).json({ 
+      success: false,
+      message: 'Internal server error',
+      error: err.message 
+    })
   }
 })
 
@@ -114,13 +132,18 @@ router.get('/', (req, res) => {
       const content = fs.readFileSync(path.join(dataDir, file), 'utf8')
       return JSON.parse(content)
     })
-    res.json({
+    return res.status(200).json({
       success: true,
+      message: 'Feedback list retrieved',
       data: feedbacks
     })
   } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Server error' })
+    console.error('Failed to get feedback list:', err)
+    return res.status(500).json({ 
+      success: false,
+      message: 'Failed to get feedback list',
+      error: err.message
+    })
   }
 })
 
