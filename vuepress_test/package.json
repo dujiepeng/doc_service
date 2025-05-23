@@ -1,0 +1,23 @@
+{
+  "name": "vuepress-site",
+  "version": "1.0.0",
+  "description": "A VuePress site for markdown content",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vuepress dev docs",
+    "build": "vuepress build docs"
+  },
+  "keywords": [
+    "vuepress",
+    "markdown",
+    "documentation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "vuepress": "^1.9.9"
+  },
+  "dependencies": {
+    "html2canvas": "^1.4.1"
+  }
+}

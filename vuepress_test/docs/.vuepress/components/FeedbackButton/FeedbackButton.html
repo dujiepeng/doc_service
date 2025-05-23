@@ -1,0 +1,110 @@
+<div>
+  <div class="feedback-button-container">
+    <button 
+      class="feedback-button"
+      @click="handleOpenFeedback"
+    >
+      <span>提供反馈</span>
+    </button>
+  </div>
+  <div v-if="showFeedbackForm">
+    <div class="feedback-form" @click.stop>
+      <div class="feedback-form-header">
+        <h3>问题反馈</h3>
+        <button class="feedback-close" @click="closeFeedbackForm" aria-label="关闭">×</button>
+      </div>
+      <div class="feedback-form-body">
+        <div class="form-row">
+          <label class="form-label" for="feedback-type">反馈类型</label>
+          <select
+            id="feedback-type"
+            v-model="feedbackType"
+            class="form-input"
+          >
+            <option v-for="type in feedbackTypes" :key="type.value" :value="type.value">
+              {{ type.label }}
+            </option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label class="form-label" for="feedback-content">反馈内容</label>
+          <textarea 
+            id="feedback-content" 
+            v-model="feedbackContent"
+            class="form-textarea"
+            placeholder="请详细描述您的问题或建议..."
+            rows="4"
+          ></textarea>
+        </div>
+        <!-- 截图预览区域（仅预览，居中显示，点击可放大） -->
+        <div class="form-row" v-if="screenshot">
+          <label class="form-label">预览</label>
+          <div class="preview-img-wrapper">
+            <img
+              :src="screenshot"
+              alt="截图预览"
+              class="preview-img preview-img-fullwidth"
+              @click="showBigPreview = true"
+              style="cursor: pointer;"
+            />
+          </div>
+        </div>
+      </div>
+      <div class="feedback-form-footer">
+          <button class="cancel-button" @click="closeFeedbackForm">取消</button>
+          <button class="submit-button" @click="submitFeedback" :disabled="!screenshot">提交反馈</button>
+      </div>
+    </div>
+    <!-- 大图预览弹窗（预览+编辑模式） -->
+    <div v-if="showBigPreview" class="big-preview-mask" @click="showBigPreview = false">
+      <div class="big-preview-img-box" @click.stop>
+        <template v-if="!bigEditMode">
+          <img
+            :src="screenshot"
+            alt="大图预览"
+            class="big-preview-img"
+            style="background:#fafbfc;max-width:80vw;max-height:80vh;display:block;border-radius:8px;box-shadow:0 2px 8px rgba(22,119,255,0.08);"
+          />
+          <button class="big-preview-close" @click="showBigPreview = false" aria-label="关闭">×</button>
+          <button
+            class="submit-button"
+            style="position:absolute;bottom:24px;right:24px;z-index:2;"
+            @click="enterBigEditMode"
+          >编辑</button>
+        </template>
+        <template v-else>
+          <div style="position:relative;display:inline-block;">
+            <img
+              :src="bigEditBackup"
+              alt="原图"
+              class="big-preview-img"
+              style="background:#fafbfc;max-width:80vw;max-height:80vh;display:block;position:absolute;left:0;top:0;width:100%;height:100%;border-radius:8px;pointer-events:none;user-select:none;z-index:1;"
+            />
+            <canvas
+              ref="bigEditCanvas"
+              :width="bigCanvasWidth"
+              :height="bigCanvasHeight"
+              class="big-preview-img"
+              style="background:transparent;max-width:80vw;max-height:80vh;display:block;position:relative;border-radius:8px;box-shadow:0 2px 8px rgba(22,119,255,0.08);cursor:crosshair;z-index:2;"
+              @mousedown="startBigDraw"
+              @mousemove="bigDraw"
+              @mouseup="endBigDraw"
+              @mouseleave="endBigDraw"
+            ></canvas>
+          </div>
+          <button class="big-preview-close" @click="exitBigEditMode(false)" aria-label="关闭">×</button>
+          <button
+            class="submit-button"
+            style="position:absolute;bottom:24px;right:120px;z-index:2;"
+            @click="exitBigEditMode(false)"
+          >取消</button>
+          <button
+            class="submit-button"
+            style="position:absolute;bottom:24px;right:24px;z-index:2;"
+            @click="exitBigEditMode(true)"
+          >确定</button>
+        </template>
+      </div>
+    </div>
+  </div>
+</div>

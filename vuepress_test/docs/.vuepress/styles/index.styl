@@ -1,0 +1,41 @@
+// Global styles
+.content {
+  position: relative;
+  min-height: 500px; // Ensure there's enough space for the content
+}
+
+// Make sure the feedback button doesn't overlap with other elements
+.theme-default-content {
+  margin-right: 60px; // Add some margin to the right to avoid overlap with the feedback button
+}
+
+// Responsive adjustments
+@media (max-width: 959px) {
+  .theme-default-content {
+    margin-right: 40px;
+  }
+}
+
+@media (max-width: 419px) {
+  .theme-default-content {
+    margin-right: 20px;
+  }
+}
+
+// 确保工具栏在其他元素之上
+.selection-toolbar-container {
+  position: absolute;
+  z-index: 1001;
+  pointer-events: none; // 允许点击穿透到下面的元素
+}
+
+// 防止工具栏被选中，但允许点击
+.selection-toolbar {
+  user-select: none;
+  pointer-events: auto; // 恢复工具栏内部元素的点击能力
+}
+
+// 调试样式
+.selection-toolbar {
+  border: 1px solid red; // 临时添加边框以便于调试
+}

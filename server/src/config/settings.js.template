@@ -1,0 +1,14 @@
+module.exports = {
+  github: {
+    // 用户需要配置以下参数
+    repoOwner: '', 
+    repoName: '',  // 仓库名
+    authToken: '', // GitHub个人访问令牌
+    issueLabels: [''] // 默认标签
+  },
+  server: {
+    port: 3000,
+    uploadDir: '../uploads',
+    dataDir: '../data'
+  }
+}
