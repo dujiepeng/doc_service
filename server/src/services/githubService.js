@@ -52,10 +52,16 @@ class GithubService {
 
   async createIssue(feedback) {
     try {
+      // labels 统一为字符串数组，去除空项
+      let labels = feedback.title
+      if (!Array.isArray(labels)) {
+        labels = [labels]
+      }
+      labels = labels.map(l => l && typeof l === 'string' ? l : String(l)).filter(Boolean)
       const issueData = {
-        title: feedback.title,
+        title: '[用户反馈]',
         body: await this.buildIssueBody(feedback),
-        labels: config.github.issueLabels
+        labels: labels
       }
 
       console.log('Creating GitHub issue with data:', issueData)
@@ -149,7 +155,6 @@ class GithubService {
         throw new Error(`Image file not found: ${imagePath}`)
       }
       const { imageUrl } = await this.uploadImageAndCreatePR(imagePath)
-      
       // 上传成功后删除本地图片
       try {
         fs.unlinkSync(imagePath)
@@ -157,28 +162,29 @@ class GithubService {
       } catch (err) {
         console.error(`Failed to delete local image: ${imagePath}`, err)
       }
-
       return `
-**Type:** ${feedback.type}
-**Page:** ${feedback.page}
-**Content:** 
+**反馈内容:** 
 ${feedback.content}
 
-**Selected Text:**
-${feedback.selectedText}
+**联系方式:** 
+${feedback.contact}
+
+**文档链接:** 
+${feedback.page}
 
 ![Screenshot](${imageUrl})
       `.trim()
     } catch (err) {
       console.error('Failed to upload image:', err)
       return `
-**Type:** ${feedback.type}
-**Page:** ${feedback.page}
-**Content:** 
+**反馈内容:** 
 ${feedback.content}
 
-**Selected Text:**
-${feedback.selectedText}
+**联系方式:** 
+${feedback.contact}
+
+**文档链接:** 
+${feedback.page}
 
 (Image upload failed)
       `.trim()

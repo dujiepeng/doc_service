@@ -59,7 +59,13 @@ router.post('/', upload.single('image'), async (req, res) => {
     } : null
   })
   try {
-    const { title, content } = req.body
+    let { title, content, contact, page } = req.body
+    // 解析 title 为对象
+    try {
+      title = JSON.parse(title)
+    } catch (e) {
+      // 解析失败则保留原始字符串
+    }
     if (!req.file) {
       return res.status(400).json({ 
         success: false,
@@ -68,18 +74,18 @@ router.post('/', upload.single('image'), async (req, res) => {
       })
     }
 
-      // 构造反馈数据
-      const feedback = {
-        id: Date.now(),
-        timestamp: new Date().toISOString(),
-        type: req.body.type || 'general',
-        title: title,
-        content: content,
-        page: req.body.page || '',
-        selectedText: req.body.selectedText || '',
-        imageUrl: path.join(uploadsDir, req.file.filename),
-        status: 'new'
-      }
+    // 构造反馈数据
+    const feedback = {
+      id: Date.now(),
+      timestamp: new Date().toISOString(),
+      title: title,
+      content: content,
+      contact: contact || '',
+      page: page || '',
+      selectedText: req.body.selectedText || '',
+      imageUrl: path.join(uploadsDir, req.file.filename),
+      status: 'new'
+    }
 
     // 保存到JSON文件
     const feedbackPath = path.join(dataDir, `feedback-${feedback.id}.json`)
