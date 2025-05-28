@@ -50,6 +50,14 @@ const upload = multer({
 
 // 提交反馈
 router.post('/', upload.single('image'), async (req, res) => {
+  console.log('--- FULL req.body ---')
+  console.log(req.body)
+  console.log('--- FULL req.file ---')
+  console.log(req.file)
+  console.log('--- FULL req.headers ---')
+  console.log(req.headers)
+  console.log('--- FULL req.query ---')
+  console.log(req.query)
   console.log('Received feedback submission:', {
     body: req.body,
     file: req.file ? {
@@ -57,6 +65,7 @@ router.post('/', upload.single('image'), async (req, res) => {
       size: req.file.size,
       mimetype: req.file.mimetype
     } : null
+    
   })
   try {
     let { title, content, contact, page } = req.body
@@ -91,6 +100,7 @@ router.post('/', upload.single('image'), async (req, res) => {
 
     // 异步提交到GitHub
     if (config.github.repoOwner && config.github.repoName && config.github.authToken) {
+      console.log('GitHub configuration found, preparing to sync feedback...')
       githubService.createIssue(feedback)
         .then(issue => {
           feedback.status = 'synced'
@@ -110,6 +120,10 @@ router.post('/', upload.single('image'), async (req, res) => {
           feedback.status = 'sync_failed'
           fs.writeFileSync(feedbackPath, JSON.stringify(feedback, null, 2))
         })
+    } else {
+      console.warn('GitHub configuration is incomplete, skipping sync')
+      feedback.status = 'not_synced'
+      fs.writeFileSync(feedbackPath, JSON.stringify(feedback, null, 2))
     }
 
     // 立即返回成功响应

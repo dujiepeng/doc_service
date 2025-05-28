@@ -1,0 +1,14 @@
+services:
+  server:
+    image: server
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    environment:
+      NODE_ENV: development
+      GITHUB_TOKEN: 
+      GITHUB_REPO_OWNER: dujiepeng
+      GITHUB_REPO_NAME: doc_service
+    ports:
+      - 3000:3000
+    command: ["npm", "start"]
