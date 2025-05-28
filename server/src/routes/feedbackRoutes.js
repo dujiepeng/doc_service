@@ -63,17 +63,16 @@ router.post('/', upload.single('image'), async (req, res) => {
     // 解析 title 为对象
     try {
       title = JSON.parse(title)
+      if(Array.isArray(title)) {
+        if(title.length == 0) {
+          title = config.github.issueLabels
+        }
+      }
     } catch (e) {
-      // 解析失败则保留原始字符串
-    }
-    if (!req.file) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Validation failed',
-        error: 'No image uploaded'
-      })
+      title = config.github.issueLabels
     }
 
+    const filePath = req.file ? path.join(uploadsDir, req.file.filename) : null
     // 构造反馈数据
     const feedback = {
       id: Date.now(),
@@ -82,8 +81,7 @@ router.post('/', upload.single('image'), async (req, res) => {
       content: content,
       contact: contact || '',
       page: page || '',
-      selectedText: req.body.selectedText || '',
-      imageUrl: path.join(uploadsDir, req.file.filename),
+      imageUrl: filePath,
       status: 'new'
     }
 

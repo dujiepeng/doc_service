@@ -151,7 +151,7 @@ class GithubService {
     try {
       // 直接使用完整的图片路径
       const imagePath = feedback.imageUrl
-      if (!fs.existsSync(imagePath)) {
+      if (!imagePath || !fs.existsSync(imagePath)) {
         throw new Error(`Image file not found: ${imagePath}`)
       }
       const { imageUrl } = await this.uploadImageAndCreatePR(imagePath)
@@ -162,32 +162,33 @@ class GithubService {
       } catch (err) {
         console.error(`Failed to delete local image: ${imagePath}`, err)
       }
-      return `
-**反馈内容:** 
-${feedback.content}
-
-**联系方式:** 
-${feedback.contact}
-
-**文档链接:** 
-${feedback.page}
-
-![Screenshot](${imageUrl})
-      `.trim()
+      return [
+        `**反馈内容：**`,
+        feedback.content || '(无)',
+        '',
+        `**联系方式：**`,
+        feedback.contact || '(无)',
+        '',
+        `**文档链接：**`,
+        feedback.page || '(无)',
+        '',
+        `**截图：**`,
+        `![Screenshot](${imageUrl})`
+      ].join('\n')
     } catch (err) {
-      console.error('Failed to upload image:', err)
-      return `
-**反馈内容:** 
-${feedback.content}
-
-**联系方式:** 
-${feedback.contact}
-
-**文档链接:** 
-${feedback.page}
-
-(Image upload failed)
-      `.trim()
+      return [
+        `**反馈内容：**`,
+        feedback.content || '(无)',
+        '',
+        `**联系方式：**`,
+        feedback.contact || '(无)',
+        '',
+        `**文档链接：**`,
+        feedback.page || '(无)',
+        '',
+        `**截图：**`,
+        `图片上传失败或者用户未提供图片`
+      ].join('\n')
     }
   }
 }

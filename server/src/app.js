@@ -1,6 +1,5 @@
 const express = require('express')
 const cors = require('cors')
-const path = require('path')
 const config = require('./config/settings')
 const feedbackRouter = require('./routes/feedbackRoutes')
 
